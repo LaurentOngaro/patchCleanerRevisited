@@ -15,35 +15,90 @@ permissions:
 
 jobs:
   pester:
-    name: Pester (${{ matrix.os }}, PowerShell ${{ matrix.psversion }})
+    name: Pester (${{ matrix.os }}, ${{ matrix.pshost.shell }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        psversion: ['5.1', '7']
+        # 'pshost' is the human label only. The actual shell selection happens
+        # via duplicated steps with `if:` guards, because GitHub Actions does
+        # not allow ${{ matrix.* }} expressions inside `shell:` keys (the
+        # shell name must be a literal). We previously tried
+        # `shell: ${{ matrix.shell }}` and GitHub returned
+        # "Unrecognized named-value: 'matrix'".
+        pshost:
+          - name: 'Windows PowerShell 5.1'
+            shell: 'powershell'
+          - name: 'PowerShell 7+'
+            shell: 'pwsh'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PowerShell ${{ matrix.psversion }}
-        if: matrix.psversion == '7'
-        uses: actions/setup-powershell@v5
-        with:
-          powershell-version: '7.x'
+      # ---------------------------------------------------------------------
+      # Windows PowerShell 5.1 (literal `shell: powershell`)
+      # ---------------------------------------------------------------------
+      - name: Install Pester 5 (Windows PowerShell 5.1)
+        if: matrix.pshost.shell == 'powershell'
+        shell: powershell
+        run: |
+          # Pin to Pester 5: Windows PowerShell 5.1 ships with Pester 4.x,
+          # and New-PesterConfiguration does not exist there.
+          $existing = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
+          if ($existing -and $existing.Version.Major -ge 5) {
+            Write-Host "Pester $($existing.Version) already present - skipping install"
+            Import-Module Pester -Force
+          } else {
+            Install-Module -Name Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -AcceptLicense -Scope CurrentUser -ErrorAction Stop
+            Import-Module Pester -Force -MinimumVersion 5.0
+          }
+          $loaded = Get-Module -Name Pester | Select-Object -First 1
+          Write-Host "Pester in use: $($loaded.Version) on host $($PSVersionTable.PSVersion)"
 
-      - name: Install Pester
+      - name: Run Pester (Windows PowerShell 5.1)
+        if: matrix.pshost.shell == 'powershell'
+        shell: powershell
+        run: |
+          Import-Module Pester -Force -MinimumVersion 5.0
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = 'tests'
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
+        env:
+          # Required by the tests to dot-source the script without launching the GUI.
+          PCREV_TEST_HARNESS: '1'
+
+      # ---------------------------------------------------------------------
+      # PowerShell 7+ (literal `shell: pwsh`)
+      # ---------------------------------------------------------------------
+      - name: Install Pester 5 (PowerShell 7+)
+        if: matrix.pshost.shell == 'pwsh'
         shell: pwsh
         run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+          $existing = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
+          if ($existing -and $existing.Version.Major -ge 5) {
+            Write-Host "Pester $($existing.Version) already present - skipping install"
+            Import-Module Pester -Force
+          } else {
+            Install-Module -Name Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -AcceptLicense -Scope CurrentUser -ErrorAction Stop
+            Import-Module Pester -Force -MinimumVersion 5.0
+          }
+          $loaded = Get-Module -Name Pester | Select-Object -First 1
+          Write-Host "Pester in use: $($loaded.Version) on host $($PSVersionTable.PSVersion)"
 
-      - name: Run Pester
+      - name: Run Pester (PowerShell 7+)
+        if: matrix.pshost.shell == 'pwsh'
         shell: pwsh
         run: |
-          $config = New-PesterConfiguration
-          $config.Run.Path = 'tests'
-          $config.Output.Verbosity = 'Detailed'
-          $config.Run.Exit = $true
-          Invoke-Pester -Configuration $config
+          Import-Module Pester -Force -MinimumVersion 5.0
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = 'tests'
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
+        env:
+          # Required by the tests to dot-source the script without launching the GUI.
+          PCREV_TEST_HARNESS: '1'
