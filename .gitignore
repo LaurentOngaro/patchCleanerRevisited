@@ -28,6 +28,7 @@ WindowsPatchCleaner_Leftovers_*/
 .DS_Store
 Thumbs.db
 
-# Publishing templates live under social/. They are tracked in this repository.
-# Drop the next line if you prefer to keep them out of the public source tree.
+# Publishing templates and contest-specific notes live under social/.
+# This directory is INTENTIONALLY excluded from the public repository: it is
+# private material and must not be pushed to GitHub. Do not remove this line.
 social/

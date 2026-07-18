@@ -1,39 +1,81 @@
 <#
 .SYNOPSIS
-  A GUI tool to manage the C:\Windows\Installer folder by identifying and cleaning orphaned or outdated MSI/MSP files.
+  Reviews and manages the C:\Windows\Installer cache by identifying orphaned
+  or outdated MSI/MSP files, old .NET package revisions, and related leftovers.
 
 .DESCRIPTION
-  This script provides a comprehensive interface to safely reclaim disk space from the Windows Installer cache.
-  It compares physical files against the registered products and patches in the Windows Installer database.
+  This script provides a transparent single-file PowerShell + WPF interface to
+  review the Windows Installer cache and the .NET runtime layout before any
+  cleanup. It compares physical files against the products and patches
+  registered by the Windows Installer database, with dry-run-first defaults
+  and explicit safeguards around destructive operations.
 
   Key Features:
-  - Orphaned Detection: Finds files no longer linked to any installed product.
-  - Registered View: Optionally displays all registered installers for management.
-  - Deep Scan: Reads digital certificates for more accurate identification and filtering.
-  - Smart Filters:
-    - Text Search: Real-time filtering with a manual refresh button.
-    - Show Selected Only: Toggle to focus on checked items.
-    - Exclusions: Customizable list to protect specific vendors (e.g., Adobe) or products.
-  - Specialized Cleaning:
-    - .NET Framework Cleanup: Automatically identifies and selects older .NET patches, keeping only the latest version for each branch.
-  - Safety & Management:
-    - System Restore: Option to create a restore point before any deletion or uninstallation.
-    - Batch Uninstall: Uses msiexec with basic UI (/qb) for reliable, non-interactive uninstallation of multiple packages.
-    - Batch Delete: Directly removes selected files from disk (use with caution for registered items).
-    - Export: Save the list of identified files to a text file.
-  - Dynamic UI:
-    - Status bar showing "Selected / Total" items.
-    - Progress counter showing "Remaining / Total" during batch operations.
+  - Orphaned detection: finds MSI/MSP files no longer linked to any installed
+    product, using the WindowsInstaller.Installer COM API (no VBScript).
+  - Registered view: optionally shows all registered installers alongside the
+    orphaned ones, with their metadata, product codes, and install dates.
+  - Deep Scan: reads Authenticode signer information for more accurate
+    filtering and exclusion.
+  - Smart filters: real-time text search, "Show selected only" toggle, and a
+    customisable exclusion list (Adobe is preconfigured).
+  - .NET cleanup: groups .NET, .NET Core, ASP.NET Core, Windows Desktop
+    Runtime, and targeting pack packages by product and major.minor branch,
+    and keeps only the latest patch revision detected in each group. Defaults
+    to dry-run mode so candidates are selected for review instead of being
+    immediately deleted.
+  - Leftovers Scanner: confidence-scored review of leftover files, folders,
+    and registry entries related to removed packages. Uses component-wise
+    version comparison (8.0.1 != 8.0.10) and never flags a currently
+    installed .NET runtime as a leftover.
+  - Safety and management: optional system restore point before destructive
+    operations, batch uninstall via msiexec /qb, batch delete with a
+    critical-warning gate for registered packages, and JSON or text exports
+    that can be reloaded later.
+  - Dynamic UI: status bar showing "Selected / Total" items, and a progress
+    counter showing "Remaining / Total" during batch operations.
 
 .PARAMETER Help
-  Displays this help message.
+  Displays the full help for this script. Equivalent to -h.
 
 .EXAMPLE
-  .\patchCleanerRevisited.ps1
-  Launches the graphical interface.
+  PS> .\patchCleanerRevisited.ps1
+  Launches the graphical interface. Run from an elevated PowerShell prompt
+  on Windows 10 or Windows 11.
+
+.EXAMPLE
+  PS> Get-Help .\patchCleanerRevisited.ps1 -Full
+  Displays this help message, including parameter descriptions and examples.
+
+.EXAMPLE
+  PS> $env:PCREV_TEST_HARNESS = '1'; . .\patchCleanerRevisited.ps1
+  Dot-sources the script in test-harness mode: all helper functions are
+  loaded, then the script returns just before the WPF UI is shown. Used by
+  the Pester suite in tests/ and by contributors who want to exercise the
+  pure functions interactively.
 
 .NOTES
-  Administrator privileges are required to access C:\Windows\Installer and perform uninstalls/deletions.
+  Author          : Laurent Ongaro
+  Version         : see VERSION.txt at the repository root (single source of truth)
+  Repository      : https://github.com/LaurentOngaro/patchCleanerRevisited
+  Security policy : https://github.com/LaurentOngaro/patchCleanerRevisited/blob/main/SECURITY.md
+  Licence         : MIT
+  Encoding        : UTF-8 with BOM, CRLF line endings (required so that
+                    non-ASCII glyphs such as "↻" render correctly on
+                    Windows PowerShell 5.1)
+
+  Administrator privileges are required to access C:\Windows\Installer and to
+  perform uninstalls or deletions. Read the Security and Backup Disclaimer in
+  README.md before running any non-dry-run action.
+
+.LINK
+  https://github.com/LaurentOngaro/patchCleanerRevisited
+
+.LINK
+  https://www.homedev.com.au/Free/PatchCleaner
+
+.LINK
+  README.md
 #>
 
 param (
@@ -41,12 +83,8 @@ param (
   [switch]$Help
 )
 
-# Display script summary at launch
-Write-Host 'This script provides a GUI to list and manage orphaned MSI/MSP files in the Windows Installer folder.'
-
-# Display help message if -Help parameter is used
 if ($Help) {
-  Get-Help -Name $MyInvocation.MyCommand.Name -Full
+  Get-Help -Name 'patchCleanerRevisited.ps1' -Full
   exit
 }
 
@@ -2046,6 +2084,15 @@ $window.add_Loaded({
         Invoke-Scan
     }
 })
+
+# Test harness: when PCREV_TEST_HARNESS is set, exit right before the GUI is
+# shown. The Pester suite dot-sources this script in a child PowerShell process
+# so it can exercise the pure functions (Compare-VersionString,
+# Test-InstalledVersion, Get-PackageKeywords) without launching the WPF UI or
+# touching the real filesystem / registry.
+if ($env:PCREV_TEST_HARNESS) {
+  return
+}
 
 # Show the GUI
 $window.ShowDialog() | Out-Null

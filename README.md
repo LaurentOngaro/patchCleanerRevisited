@@ -11,6 +11,14 @@ Built as a **modern, audit-friendly alternative** to [HomeDev's PatchCleaner](ht
 > **Warning**
 > This is a system-maintenance tool, not a one-click cleaner. Removing a required MSI/MSP file can break application repair, updates, or uninstallation. Start with a dry run, review every selection, export the results, and keep a tested system backup.
 
+## Screenshots
+
+|                                                                                                                                                                                                                            |                                                                                                                                                                                                                                                                                |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| **Main window** — orphaned and registered MSI/MSP inventory with metadata, exclusions, deep-scan, dry-run and restore-point controls.<br/>[![Main window](screenshots/01-main-window.png)](screenshots/01-main-window.png) | **Leftovers Scanner** — confidence-scored review of files, folders, and registry entries linked to removed packages, with search, type filters, and per-item selection.<br/>[![Leftovers Scanner](screenshots/02-leftovers-scanner.png)](screenshots/02-leftovers-scanner.png) |
+
+> The screenshots are taken from a development build on Windows 10/11. Sensitive identifiers (usernames, license keys, product codes) are not visible in the captured frames.
+
 ## Security and Backup Disclaimer
 
 This script requires **Administrator privileges** and performs operations that can affect the Windows Installer database, the registry, and files under `C:\Windows\Installer`. Even with built-in safeguards, a misunderstanding, an edge case, or a Windows API regression can cause applications to fail repair, update, or uninstall.
@@ -55,7 +63,7 @@ PatchCleaner Revisited addresses those gaps with a transparent, script-first wor
 
 | Concern                  | HomeDev PatchCleaner (1.4.2.0, 2016) | PatchCleaner Revisited                                     |
 | ------------------------ | ------------------------------------ | ---------------------------------------------------------- |
-| Latest release | 2016 (no maintenance since) | Active development |
+| Latest release           | 2016 (no maintenance since)          | Active development                                         |
 | Code transparency        | Closed binary installer              | One PowerShell script, fully readable                      |
 | Windows Installer access | VBScript + WMI                       | `WindowsInstaller.Installer` COM API                       |
 | .NET package cleanup     | Not specialized                      | Grouped by product and major.minor, dry-run first          |
@@ -206,8 +214,27 @@ If you spot a defect introduced or amplified by the AI-assisted workflow, please
 - **Per-package backup of cached installers** to a user-chosen directory before any deletion.
 - **Portable ZIP release** with a launcher that requests elevation only when needed.
 - **Localized UI** (French first, then community contributions).
-- **Pester-based test suite** covering the keyword extraction, version comparison, and exclusion logic.
+- **More Pester coverage** for `Search-FileSystemLeftovers`, `Search-RegistryLeftovers`, and the JSON export schema.
 - **Signed release binary** for users who prefer a single-file download.
+
+## Tests
+
+The pure helper functions are covered by a Pester suite in [`tests/`](tests):
+
+- `tests/Compare-VersionString.Tests.ps1` - equality, inequality, anti-FP guards against the `8.0.1` vs `8.0.10` mix-up.
+- `tests/Test-InstalledVersion.Tests.ps1` - last-line-of-defence guard that prevents flagging a live .NET install as a leftover.
+- `tests/Get-PackageKeywords.Tests.ps1` - keyword extraction and stop-word filtering used by the Leftovers Scanner.
+
+Tests dot-source `patchCleanerRevisited.ps1` with `$env:PCREV_TEST_HARNESS = '1'`, which makes the script exit right before the WPF UI is shown. No filesystem or registry state is touched, no administrator privileges are required, and the suite runs identically on Windows PowerShell 5.1 and PowerShell 7.
+
+Run locally:
+
+```powershell
+Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+Invoke-Pester -Path .\tests -Output Detailed
+```
+
+A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the same suite on every push and pull request to `main`.
 
 ## Other projects by the same author
 

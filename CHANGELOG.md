@@ -5,9 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [1.0.1] - 2026-07-18
+## [1.0.2] - 2026-07-18
 
 ### Added
 
@@ -42,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONTRIBUTING.md` step 4 was updated to point contributors at the
   `PCREV_TEST_HARNESS` pattern when adding new tests, instead of asking
   them to invent their own harness.
+
+## [1.0.1] - 2026-07-18
+
+- chore: No changes
 
 ### Fixed
 
@@ -81,6 +83,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The GUI and PowerShell code are English-only.
 - No automated test suite yet.
 
-[Unreleased]: https://github.com/LaurentOngaro/patchCleanerRevisited/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/LaurentOngaro/patchCleanerRevisited/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/LaurentOngaro/patchCleanerRevisited/releases/tag/v1.0.0

@@ -21,9 +21,11 @@ Thanks for your interest in PatchCleaner Revisited! This project is **free, open
    ```
 
 3. **Make your changes** in small, focused commits. Use the existing code style: 2-space indent, UTF-8 BOM for `.ps1` files, CRLF line endings.
-4. **Add or update tests** when you fix a bug or change detection logic. The `tests/` folder is the target. If you do not know how to test the GUI, write a Pester test for the helper functions (`Get-PackageKeywords`, `Compare-VersionString`, `Test-InstalledVersion`, `Search-FileSystemLeftovers`, `Search-RegistryLeftovers`).
+4. **Add or update tests** when you fix a bug or change detection logic. The `tests/` folder is the target and currently covers `Compare-VersionString`, `Test-InstalledVersion`, and `Get-PackageKeywords`. If you do not know how to test the GUI, write a Pester test for the helper functions. The existing tests dot-source `patchCleanerRevisited.ps1` with `$env:PCREV_TEST_HARNESS = '1'`; follow the same pattern so the suite stays GUI-free and CI-friendly.
 5. **Update `CHANGELOG.md`** under the `[Unreleased]` section.
 6. **Open a Pull Request** using the provided template. Link the related issue with `Closes #NNN` or `Refs #NNN`.
+
+> Do **not** edit `VERSION.txt` in a feature Pull Request. The file is bumped only at release time by the maintainer.
 
 ## Coding conventions
 
@@ -65,3 +67,25 @@ If you discover a security vulnerability, **do not open a public issue**. Follow
 ## Licence
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+
+## Versioning and releases
+
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (`MAJOR.MINOR.PATCH`).
+The current version lives in [`VERSION.txt`](VERSION.txt) at the root of the repository, on its own line, in plain UTF-8 text with no prefix or suffix:
+For instance:
+
+```
+1.0.2
+```
+
+`VERSION.txt` is the single source of truth for the public version number. It is **not** duplicated inside `patchCleanerRevisited.ps1`: contributors and tools should read it from the file, not maintain a second copy in the script header.
+
+The file is named `VERSION.txt` (with the `.txt` extension) on purpose. A bare `VERSION` filename is hijacked by the C/C++ extension of VS Code and turns the file into a C/C++ version header, which would not display correctly for PowerShell contributors.
+
+At each release, the maintainer updates three places in a single commit:
+
+1. `VERSION.txt` — bump to the new SemVer number.
+2. `CHANGELOG.md` — move the `[Unreleased]` entries under a dated `[X.Y.Z] - YYYY-MM-DD` heading.
+3. Git tag — `git tag -a vX.Y.Z -m "X.Y.Z - short summary"` followed by `git push origin vX.Y.Z`.
+
+Contributors must not edit `VERSION.txt` in their Pull Requests. The file is bumped only by the maintainer when cutting a release.
