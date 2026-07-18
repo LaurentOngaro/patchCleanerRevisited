@@ -694,7 +694,7 @@ function Search-FileSystemLeftovers {
                 if (Test-InstalledVersion -Version $versionName -InstalledVersions $InstalledVersions) { continue }
 
                 foreach ($v in $VersionKeywords) {
-                    # Component-wise comparison (not prefix matching) — fixes 8.0.1 vs 8.0.10.
+                    # Component-wise comparison (not prefix matching) - fixes 8.0.1 vs 8.0.10.
                     if ((Compare-VersionString -A $versionName -B $v) -eq 0) {
                         $results += [PSCustomObject]@{
                             Type            = 'Folder'
@@ -753,7 +753,7 @@ function Search-FileSystemLeftovers {
             $versionMatched = $false
             $matchedVersion = $null
             foreach ($v in $VersionKeywords) {
-                # Component-wise comparison (not prefix) — keeps "8.0.1" distinct from "8.0.10".
+                # Component-wise comparison (not prefix) - keeps "8.0.1" distinct from "8.0.10".
                 if ((Compare-VersionString -A $parentName -B $v) -eq 0) {
                     $versionMatched = $true
                     $matchedVersion = $v
@@ -915,7 +915,7 @@ function Search-RegistryLeftovers {
 # they appear in the corresponding version folder (e.g. "8.0.29", "9.0.18").
 #
 # We do NOT rely solely on `dotnet --list-runtimes` because that command only reports runtimes
-# that are part of a "shared framework" — it misses targeting packs, SDK packs, templates, and
+# that are part of a "shared framework" - it misses targeting packs, SDK packs, templates, and
 # any manually-installed component. Instead we inspect the filesystem directly:
 #   - C:\ProgramFiles\dotnet\shared\<runtime>\<version>
 #   - C:\ProgramFiles\dotnet\sdk\<version>
