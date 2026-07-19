@@ -11,7 +11,15 @@
 
 BeforeAll {
     $env:PCREV_TEST_HARNESS = '1'
-    . (Join-Path $PSScriptRoot '..' 'patchCleanerRevisited.ps1')
+    # `$PSScriptRoot` is not reliably populated inside Pester 5.x BeforeAll
+    # blocks under Windows PowerShell 5.1, so we resolve the project root
+    # through `$Pester.BuildRoot` first (set by Pester 5 at discovery time),
+    # and fall back to the parent of the tests/ directory otherwise.
+    $projectRoot = $null
+    if ($Pester -and $Pester.BuildRoot) { $projectRoot = $Pester.BuildRoot }
+    elseif ($PSScriptRoot)              { $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
+    if (-not $projectRoot)              { $projectRoot = (Resolve-Path '.').Path }
+    . (Join-Path $projectRoot 'patchCleanerRevisited.ps1')
     Remove-Item env:PCREV_TEST_HARNESS -ErrorAction SilentlyContinue
 }
 
